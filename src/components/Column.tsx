@@ -6,6 +6,8 @@ interface IColumnStyleProps {
   spanHeight: boolean;
   maxWidth: number;
   center: boolean;
+  direction: string;
+  alignItems: string;
 }
 
 interface IColumnProps extends IColumnStyleProps {
@@ -19,15 +21,15 @@ const SColumn = styled.div<IColumnStyleProps>`
   max-width: ${({ maxWidth }) => `${maxWidth}px`};
   margin: 0 auto;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: ${({ direction }) => direction};
+  align-items: ${({ alignItems }) => alignItems};
   justify-content: ${({ center }) => (center ? "center" : "flex-start")};
 `;
 
 const Column = (props: IColumnProps) => {
-  const { children, spanHeight, maxWidth, center } = props;
+  const { children, spanHeight, maxWidth, center, direction } = props;
   return (
-    <SColumn {...props} spanHeight={spanHeight} maxWidth={maxWidth} center={center}>
+    <SColumn {...props} spanHeight={spanHeight} maxWidth={maxWidth} center={center} direction={direction}>
       {children}
     </SColumn>
   );
@@ -38,12 +40,15 @@ Column.propTypes = {
   spanHeight: PropTypes.bool,
   maxWidth: PropTypes.number,
   center: PropTypes.bool,
+  direction: PropTypes.string,
 };
 
 Column.defaultProps = {
   spanHeight: false,
   maxWidth: 600,
   center: false,
+  direction: 'column',
+  alignItems: 'center'
 };
 
 export default Column;

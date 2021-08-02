@@ -105,14 +105,24 @@ const SKey = styled.div`
   font-weight: 700;
 `;
 
+interface IAlignStyleProps {
+  right?: boolean;
+}
+const SParamsKey = styled.div<IAlignStyleProps>`
+  width: 90px;
+  font-weight: 700;
+  margin-right: 1em;
+  text-align: ${props => (props.right ? "right" : "left")};
+`;
+
 const SValue = styled.div`
   width: 70%;
   font-family: monospace;
 `;
 
 const STestButtonContainer = styled.div`
-  width: 100%;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
@@ -127,6 +137,18 @@ const STestButton = styled(Button as any)`
   margin: 12px;
 `;
 
+const SActionContainer = styled.div`
+  flex: 1;
+`;
+
+const SParamsInput = styled.input<{ width?: string }>`
+  width: ${({ width }) => (width ? width : "initial")};
+  border: none;
+  outline: none;
+  border-bottom: 1px solid #4099ff;
+  text-align: center;
+`;
+
 interface IAppState {
   connector: WalletConnect | null;
   fetching: boolean;
@@ -138,8 +160,29 @@ interface IAppState {
   accounts: string[];
   address: string;
   result: any | null;
+  type: string;
+  params: any | null;
   assets: IAssetData[];
 }
+
+const btnList = [
+  {
+    type: "sendTransaction",
+    label: "eth_sendTransaction",
+  },
+  {
+    type: "ethSign",
+    label: "eth_sign",
+  },
+  {
+    type: "personalSign",
+    label: "personal_sign",
+  },
+  {
+    type: "signTypedData",
+    label: "eth_signTypedData",
+  },
+];
 
 const INITIAL_STATE: IAppState = {
   connector: null,
@@ -153,6 +196,8 @@ const INITIAL_STATE: IAppState = {
   address: "",
   result: null,
   assets: [],
+  type: "sendTransaction",
+  params: {},
 };
 
 class App extends React.Component<any, any> {
@@ -244,6 +289,7 @@ class App extends React.Component<any, any> {
   };
 
   public onConnect = async (payload: IInternalEvent) => {
+    this.changeType("sendTransaction");
     const { chainId, accounts } = payload.params[0];
     const address = accounts[0];
     await this.setState({
@@ -260,6 +306,7 @@ class App extends React.Component<any, any> {
   };
 
   public onSessionUpdate = async (accounts: string[], chainId: number) => {
+    this.changeType("sendTransaction");
     const address = accounts[0];
     await this.setState({ chainId, accounts, address });
     await this.getAccountAssets();
@@ -281,6 +328,48 @@ class App extends React.Component<any, any> {
 
   public toggleModal = () => this.setState({ showModal: !this.state.showModal });
 
+  public changeType = async (type: string) => {
+    // gasPrice
+    let gasPrice = 0;
+    if (type === "sendTransaction") {
+      const gasPrices = await apiGetGasPrices();
+      gasPrice = gasPrices.slow.price;
+    }
+    const paramsTpl = {
+      sendTransaction: {
+        to: "",
+        gasPrice,
+        gasLimit: "21000",
+        value: "0",
+        data: "0x",
+      },
+      ethSign: {
+        message: "",
+      },
+      personalSign: {
+        message: "",
+      },
+      signTypedData: {},
+    };
+    const params = { ...paramsTpl[type] };
+    this.setState({ type, params });
+  };
+
+  public inputChangeHandler = (e: React.ChangeEvent<any>, key: string) => {
+    this.state.params[key] = e.target.value;
+    this.setState({ params: this.state.params });
+  };
+
+  public send = () => {
+    const methodMap = {
+      sendTransaction: this.testSendTransaction,
+      ethSign: this.testSignEthMessage,
+      personalSign: this.testSignPersonalMessage,
+      signTypedData: this.testSignTypedData,
+    };
+    methodMap[this.state.type]();
+  };
+
   public testSendTransaction = async () => {
     const { connector, address, chainId } = this.state;
 
@@ -288,31 +377,32 @@ class App extends React.Component<any, any> {
       return;
     }
 
+    const { to, gasPrice: _gasPrice, gasLimit: _gasLimit, value: _value, data } = this.state.params;
     // from
     const from = address;
 
     // to
-    const to = address;
+    // const to = address;
 
     // nonce
     const _nonce = await apiGetAccountNonce(address, chainId);
     const nonce = sanitizeHex(convertStringToHex(_nonce));
 
     // gasPrice
-    const gasPrices = await apiGetGasPrices();
-    const _gasPrice = gasPrices.slow.price;
+    // const gasPrices = await apiGetGasPrices();
+    // const _gasPrice = gasPrices.slow.price;
     const gasPrice = sanitizeHex(convertStringToHex(convertAmountToRawNumber(_gasPrice, 9)));
 
     // gasLimit
-    const _gasLimit = 21000;
+    // const _gasLimit = 21000;
     const gasLimit = sanitizeHex(convertStringToHex(_gasLimit));
 
     // value
-    const _value = 0;
+    // const _value = 0;
     const value = sanitizeHex(convertStringToHex(_value));
 
     // data
-    const data = "0x";
+    // const data = "0x";
 
     // test transaction
     const tx = {
@@ -324,6 +414,7 @@ class App extends React.Component<any, any> {
       value,
       data,
     };
+    console.log("params：", tx);
 
     try {
       // open modal
@@ -356,6 +447,58 @@ class App extends React.Component<any, any> {
     }
   };
 
+  public testSignEthMessage = async () => {
+    const { connector, address, chainId } = this.state;
+
+    if (!connector) {
+      return;
+    }
+
+    // test message
+    // const message = "My email is john@doe.com - 1537836206101";
+    const { message } = this.state.params;
+
+    // encode message (hex)
+    // const hexMsg = convertUtf8ToHex(message);
+    const hexMsg = hashPersonalMessage(message);
+
+    // personal_sign params
+    const msgParams = [address, hexMsg];
+
+    try {
+      // open modal
+      this.toggleModal();
+
+      // toggle pending request indicator
+      this.setState({ pendingRequest: true });
+
+      // send message
+      const result = await connector.signMessage(msgParams);
+
+      // verify signature
+      const hash = hashPersonalMessage(message);
+      const valid = await verifySignature(address, result, hash, chainId);
+
+      // format displayed result
+      const formattedResult = {
+        method: "eth_sign",
+        address,
+        valid,
+        result,
+      };
+
+      // display result
+      this.setState({
+        connector,
+        pendingRequest: false,
+        result: formattedResult || null,
+      });
+    } catch (error) {
+      console.error(error);
+      this.setState({ connector, pendingRequest: false, result: null });
+    }
+  };
+
   public testSignPersonalMessage = async () => {
     const { connector, address, chainId } = this.state;
 
@@ -364,7 +507,8 @@ class App extends React.Component<any, any> {
     }
 
     // test message
-    const message = "My email is john@doe.com - 1537836206101";
+    // const message = "My email is john@doe.com - 1537836206101";
+    const { message } = this.state.params;
 
     // encode message (hex)
     const hexMsg = convertUtf8ToHex(message);
@@ -381,6 +525,7 @@ class App extends React.Component<any, any> {
 
       // send message
       const result = await connector.signPersonalMessage(msgParams);
+      console.log("===> ", result);
 
       // verify signature
       const hash = hashPersonalMessage(message);
@@ -388,7 +533,7 @@ class App extends React.Component<any, any> {
 
       // format displayed result
       const formattedResult = {
-        method: "personal_sign",
+        method: "Personal_sign",
         address,
         valid,
         result,
@@ -462,6 +607,8 @@ class App extends React.Component<any, any> {
       showModal,
       pendingRequest,
       result,
+      type,
+      params,
     } = this.state;
     return (
       <SLayout>
@@ -487,23 +634,53 @@ class App extends React.Component<any, any> {
                 </SButtonContainer>
               </SLanding>
             ) : (
-              <SBalances>
+              <SBalances maxWidth={800}>
                 <Banner />
                 <h3>Actions</h3>
-                <Column center>
+                <Column alignItems="flex-start" direction="row">
                   <STestButtonContainer>
-                    <STestButton left onClick={this.testSendTransaction}>
-                      {"eth_sendTransaction"}
-                    </STestButton>
-
-                    <STestButton left onClick={this.testSignPersonalMessage}>
-                      {"personal_sign"}
-                    </STestButton>
-
-                    <STestButton left onClick={this.testSignTypedData}>
-                      {"eth_signTypedData"}
-                    </STestButton>
+                    {btnList.map(item => (
+                      <STestButton
+                        color={type === item.type ? "lightBlue" : "gray"}
+                        left
+                        key={item.type}
+                        onClick={() => this.changeType(item.type)}
+                      >
+                        {item.label}
+                      </STestButton>
+                    ))}
                   </STestButtonContainer>
+                  <SActionContainer>
+                    <STable style={{ margin: "1em 0 2em 0" }}>
+                      {Object.keys(params).map(key => (
+                        <SRow key={key} style={{ marginTop: "1em" }}>
+                          <SParamsKey right>{key} :</SParamsKey>
+                          <SValue>
+                            {["data", "message"].includes(key) ? (
+                              <textarea
+                                style={{
+                                  width: "100%",
+                                  border: "1px solid #4099ff",
+                                  borderRadius: "4px",
+                                  outline: "none",
+                                }}
+                                value={params[key]}
+                                onChange={e => this.inputChangeHandler(e, key)}
+                              />
+                            ) : (
+                              <SParamsInput
+                                type="text"
+                                value={params[key]}
+                                width={key === "to" ? "100%" : ""}
+                                onChange={e => this.inputChangeHandler(e, key)}
+                              />
+                            )}
+                          </SValue>
+                        </SRow>
+                      ))}
+                    </STable>
+                    <Button onClick={this.send}>Send</Button>
+                  </SActionContainer>
                 </Column>
                 <h3>Balances</h3>
                 {!fetching ? (
