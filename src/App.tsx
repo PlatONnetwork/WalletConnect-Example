@@ -11,7 +11,7 @@ import Modal from "./components/Modal";
 import Header from "./components/Header";
 import Loader from "./components/Loader";
 import { fonts } from "./styles";
-import { apiGetAccountAssets, apiGetGasPrices, apiGetAccountNonce } from "./helpers/api";
+import { apiGetAccountAssets, apiGetGasPrices, apiGetAccountNonce } from "./helpers/api-platon";
 import {
   sanitizeHex,
   verifySignature,
@@ -317,7 +317,14 @@ class App extends React.Component<any, any> {
     this.setState({ fetching: true });
     try {
       // get account balances
-      const assets = await apiGetAccountAssets(address, chainId);
+      const balance = await apiGetAccountAssets(address, chainId);
+      const assets = {
+        symbol: "ETH",
+        name: "Ether",
+        decimals: "18",
+        contractAddress: "",
+        balance: balance,
+      };
 
       await this.setState({ fetching: false, address, assets });
     } catch (error) {
