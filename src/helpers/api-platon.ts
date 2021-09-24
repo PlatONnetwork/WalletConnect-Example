@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
-import { IAssetData, IGasPrices, IParsedTx } from "./types";
-import * as utils from "./utils.min.js";
+import { IAssetData, IParsedTx } from "./types";
+// import * as utils from "./utils.min.js";
 
 const api: AxiosInstance = axios.create({
   // baseURL: "http://192.168.120.146:6789",
@@ -12,8 +12,9 @@ const api: AxiosInstance = axios.create({
   },
 });
 
-export async function apiGetAccountAssets(address: string, chainId: number): Promise<IAssetData[]> {
-  address = utils.toBech32Address('lat', address);
+const hrp = 'lat'
+export async function apiGetAccountAssets(address: string): Promise<IAssetData[]> {
+  address = window.Web3Utils.toBech32Address(hrp, address);
   const response = await api.post("", {
     jsonrpc: "2.0",
     method: "platon_getBalance",
@@ -33,8 +34,8 @@ export async function apiGetAccountTransactions(
   return result;
 }
 
-export const apiGetAccountNonce = async (address: string, chainId: number): Promise<string> => {
-  address = utils.toBech32Address('lat', address);
+export const apiGetAccountNonce = async (address: string): Promise<string> => {
+  address = window.Web3Utils.toBech32Address(hrp, address);
   const response = await api.post("", {
     jsonrpc: "2.0",
     method: "platon_getTransactionCount",
@@ -45,7 +46,7 @@ export const apiGetAccountNonce = async (address: string, chainId: number): Prom
   return result;
 };
 
-export const apiGetGasPrices = async (): Promise<IGasPrices> => {
+export const apiGetGasPrices = async (): Promise<string> => {
   const response = await api.post("", {
     jsonrpc: "2.0",
     method: "platon_gasPrice",

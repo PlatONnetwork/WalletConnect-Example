@@ -9,8 +9,8 @@ const AccountAssets = (props: any) => {
     chainId === 100
       ? {
           contractAddress: "",
-          symbol: "xDAI",
-          name: "xDAI",
+          symbol: "Lat",
+          name: "Platon",
           decimals: "18",
           balance: "0",
         }
@@ -30,6 +30,7 @@ const AccountAssets = (props: any) => {
         ? asset.symbol.toLowerCase() === nativeCurrency.symbol.toLowerCase()
         : false,
     );
+    defaultNativeCurrency.balance = assets[0].balance;
     nativeCurrency =
       filteredNativeCurrency && filteredNativeCurrency.length
         ? filteredNativeCurrency[0]

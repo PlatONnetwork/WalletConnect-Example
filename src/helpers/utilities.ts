@@ -102,7 +102,8 @@ export function isMobile(): boolean {
 }
 
 export function getChainData(chainId: number): IChainData {
-  const chainData = SUPPORTED_CHAINS.filter((chain: any) => chain.chain_id === chainId)[0];
+  const chainData =
+    SUPPORTED_CHAINS.filter((chain: any) => chain.chain_id === chainId)[0] || SUPPORTED_CHAINS[1];
 
   if (!chainData) {
     throw new Error("ChainId missing or not supported");

@@ -18,7 +18,8 @@ import {
   hashTypedDataMessage,
   hashPersonalMessage,
 } from "./helpers/utilities";
-import { convertAmountToRawNumber, convertStringToHex } from "./helpers/bignumber";
+// import { convertAmountToRawNumber, convertStringToHex } from "./helpers/bignumber";
+import { convertStringToHex, multiply, convertHexToString } from "./helpers/bignumber";
 import { IAssetData } from "./helpers/types";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
@@ -313,20 +314,13 @@ class App extends React.Component<any, any> {
   };
 
   public getAccountAssets = async () => {
-    const { address, chainId } = this.state;
+    const { address } = this.state;
     this.setState({ fetching: true });
     try {
       // get account balances
-      const balance = await apiGetAccountAssets(address, chainId);
-      const assets = {
-        symbol: "ETH",
-        name: "Ether",
-        decimals: "18",
-        contractAddress: "",
-        balance: balance,
-      };
+      const balance = await apiGetAccountAssets(address);
 
-      await this.setState({ fetching: false, address, assets });
+      await this.setState({ fetching: false, address, assets: [{ balance }] });
     } catch (error) {
       console.error(error);
       await this.setState({ fetching: false });
@@ -337,14 +331,13 @@ class App extends React.Component<any, any> {
 
   public changeType = async (type: string) => {
     // gasPrice
-    let gasPrice = 0;
+    let gasPrice = "0";
     if (type === "sendTransaction") {
-      const gasPrices = await apiGetGasPrices();
-      gasPrice = gasPrices.slow.price;
+      gasPrice = convertHexToString(await apiGetGasPrices()) || "0";
     }
     const paramsTpl = {
       sendTransaction: {
-        to: "",
+        to: this.state.address,
         gasPrice,
         gasLimit: "21000",
         value: "0",
@@ -378,7 +371,7 @@ class App extends React.Component<any, any> {
   };
 
   public testSendTransaction = async () => {
-    const { connector, address, chainId } = this.state;
+    const { connector, address } = this.state;
 
     if (!connector) {
       return;
@@ -392,13 +385,14 @@ class App extends React.Component<any, any> {
     // const to = address;
 
     // nonce
-    const _nonce = await apiGetAccountNonce(address, chainId);
+    const _nonce = await apiGetAccountNonce(address);
     const nonce = sanitizeHex(convertStringToHex(_nonce));
 
     // gasPrice
     // const gasPrices = await apiGetGasPrices();
     // const _gasPrice = gasPrices.slow.price;
-    const gasPrice = sanitizeHex(convertStringToHex(convertAmountToRawNumber(_gasPrice, 9)));
+    // const gasPrice = sanitizeHex(convertStringToHex(convertAmountToRawNumber(_gasPrice, 9)));
+    const gasPrice = sanitizeHex(convertStringToHex(_gasPrice));
 
     // gasLimit
     // const _gasLimit = 21000;
@@ -406,7 +400,7 @@ class App extends React.Component<any, any> {
 
     // value
     // const _value = 0;
-    const value = sanitizeHex(convertStringToHex(_value));
+    const value = sanitizeHex(convertStringToHex(multiply(_value, 10**18)));
 
     // data
     // const data = "0x";
@@ -678,7 +672,7 @@ class App extends React.Component<any, any> {
                               <SParamsInput
                                 type="text"
                                 value={params[key]}
-                                width={key === "to" ? "100%" : ""}
+                                width={key === "to" ? "140%" : ""}
                                 onChange={e => this.inputChangeHandler(e, key)}
                               />
                             )}
