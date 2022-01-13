@@ -8,4 +8,5 @@ declare module '*.tiff'
 
 interface Window {
   Web3Utils: any
+  _platon: any
 }

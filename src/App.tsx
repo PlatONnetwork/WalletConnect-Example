@@ -24,6 +24,7 @@ import { IAssetData } from "./helpers/types";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
 import { eip712 } from "./helpers/eip712";
+// import { keccak256, toBuffer } from "ethereumjs-util";
 
 const SLayout = styled.div`
   position: relative;
@@ -431,8 +432,8 @@ class App extends React.Component<any, any> {
       const formattedResult = {
         method: "eth_sendTransaction",
         txHash: result,
-        from: address,
-        to: address,
+        from: tx.from,
+        to: tx.to,
         value: "0 ETH",
       };
 
@@ -457,14 +458,18 @@ class App extends React.Component<any, any> {
 
     // test message
     // const message = "My email is john@doe.com - 1537836206101";
-    const { message } = this.state.params;
+    // const hexMsg = convertUtf8ToHex(message);
 
     // encode message (hex)
-    // const hexMsg = convertUtf8ToHex(message);
-    const hexMsg = hashPersonalMessage(message);
+    const { message } = this.state.params;
+    const hexMsg = convertUtf8ToHex(message);
+    // const hexMsg = hashPersonalMessage(message);
 
     // personal_sign params
+    // const msg = keccak256(toBuffer(convertUtf8ToHex("\x19Ethereum Signed Message:\n" + message.length + message)));
+    // console.log(msg)
     const msgParams = [address, hexMsg];
+    console.log('params', msgParams)
 
     try {
       // open modal

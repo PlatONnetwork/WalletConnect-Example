@@ -12,7 +12,7 @@ const api: AxiosInstance = axios.create({
   },
 });
 
-const hrp = 'lat'
+const hrp = window._platon.hrp
 export async function apiGetAccountAssets(address: string): Promise<IAssetData[]> {
   address = window.Web3Utils.toBech32Address(hrp, address);
   const response = await api.post("", {
