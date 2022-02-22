@@ -23,7 +23,7 @@ import { convertStringToHex, multiply, convertHexToString } from "./helpers/bign
 import { IAssetData } from "./helpers/types";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
-import { eip712 } from "./helpers/eip712";
+// import { eip712 } from "./helpers/eip712";
 // import { keccak256, toBuffer } from "ethereumjs-util";
 
 const SLayout = styled.div`
@@ -42,6 +42,10 @@ const SContent = styled(Wrapper as any)`
 
 const SLanding = styled(Column as any)`
   height: 600px;
+`;
+
+const NButton = styled(Button as any)`
+  margin-left: 30px;
 `;
 
 const SButtonContainer = styled(Column as any)`
@@ -350,7 +354,9 @@ class App extends React.Component<any, any> {
       personalSign: {
         message: "",
       },
-      signTypedData: {},
+      signTypedData: {
+        message: "",
+      },
     };
     const params = { ...paramsTpl[type] };
     this.setState({ type, params });
@@ -371,7 +377,7 @@ class App extends React.Component<any, any> {
     methodMap[this.state.type]();
   };
 
-  public testSendTransaction = async () => {
+  public testSendTransaction = async (isDefault = false) => {
     const { connector, address } = this.state;
 
     if (!connector) {
@@ -407,7 +413,7 @@ class App extends React.Component<any, any> {
     // const data = "0x";
 
     // test transaction
-    const tx = {
+    let tx: any = {
       from,
       to,
       nonce,
@@ -416,6 +422,16 @@ class App extends React.Component<any, any> {
       value,
       data,
     };
+    if (isDefault) {
+      tx = {
+        from,
+        to,
+        gasPrice: undefined,
+        gasLimit: '',
+        value: '',
+        data: undefined
+      }
+    }
     console.log("params：", tx);
 
     try {
@@ -434,7 +450,7 @@ class App extends React.Component<any, any> {
         txHash: result,
         from: tx.from,
         to: tx.to,
-        value: "0 ETH",
+        value: tx.value,
       };
 
       // display result
@@ -462,8 +478,8 @@ class App extends React.Component<any, any> {
 
     // encode message (hex)
     const { message } = this.state.params;
-    const hexMsg = convertUtf8ToHex(message);
-    // const hexMsg = hashPersonalMessage(message);
+    const hexMsg = hashPersonalMessage(message);
+    // const hexMsg = convertUtf8ToHex(message);
 
     // personal_sign params
     // const msg = keccak256(toBuffer(convertUtf8ToHex("\x19Ethereum Signed Message:\n" + message.length + message)));
@@ -564,10 +580,12 @@ class App extends React.Component<any, any> {
       return;
     }
 
-    const message = JSON.stringify(eip712.example);
+    const { message } = this.state.params;
+    // const message = JSON.stringify(eip712.example);
 
     // eth_signTypedData params
     const msgParams = [address, message];
+    console.log(msgParams)
 
     try {
       // open modal
@@ -581,6 +599,7 @@ class App extends React.Component<any, any> {
 
       // verify signature
       const hash = hashTypedDataMessage(message);
+      console.log(hash)
       const valid = await verifySignature(address, result, hash, chainId);
 
       // format displayed result
@@ -664,6 +683,7 @@ class App extends React.Component<any, any> {
                           <SValue>
                             {["data", "message"].includes(key) ? (
                               <textarea
+                                placeholder={type === "signTypedData" ? "请输入JSON格式数据" : ""}
                                 style={{
                                   width: "100%",
                                   border: "1px solid #4099ff",
@@ -686,6 +706,7 @@ class App extends React.Component<any, any> {
                       ))}
                     </STable>
                     <Button onClick={this.send}>Send</Button>
+                    { type === 'sendTransaction' && <NButton onClick={() => this.testSendTransaction(true)}>Send Empty</NButton> }
                   </SActionContainer>
                 </Column>
                 <h3>Balances</h3>
